@@ -10,7 +10,9 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
+    "@faker-js/faker": "^9.9.0",
     "fastify": "3.2",
+    "middie": "5.1",
     "node-fetch": "2.6"
   }
 }
