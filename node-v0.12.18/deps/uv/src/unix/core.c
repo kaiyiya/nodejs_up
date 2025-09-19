@@ -655,7 +655,7 @@ int uv_chdir(const char* dir) {
   return 0;
 }
 
-
+// 禁用标准输入输出继承
 void uv_disable_stdio_inheritance(void) {
   int fd;
 

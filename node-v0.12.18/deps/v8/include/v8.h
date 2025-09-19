@@ -1621,33 +1621,33 @@ class V8_EXPORT String : public Primitive {
  public:
   enum Encoding {
     UNKNOWN_ENCODING = 0x1,
-    TWO_BYTE_ENCODING = 0x0,
-    ASCII_ENCODING = 0x4,
-    ONE_BYTE_ENCODING = 0x4
+    TWO_BYTE_ENCODING = 0x0,//JavaScript 内部使用 UTF-16 编码
+    ASCII_ENCODING = 0x4,//纯 ASCII 字符串，性能更优
+    ONE_BYTE_ENCODING = 0x4//单字节字符串，用于优化
   };
   /**
    * Returns the number of characters in this string.
    */
-  int Length() const;
+  int Length() const;// 字符数量
 
   /**
    * Returns the number of bytes in the UTF-8 encoded
    * representation of this string.
    */
-  int Utf8Length() const;
+  int Utf8Length() const; // UTF-8 字节数
 
   /**
    * Returns whether this string is known to contain only one byte data.
    * Does not read the string.
    * False negatives are possible.
    */
-  bool IsOneByte() const;
+  bool IsOneByte() const; // 是否单字节
 
   /**
    * Returns whether this string contain only one byte data.
    * Will read the entire string in some cases.
    */
-  bool ContainsOnlyOneByte() const;
+  bool ContainsOnlyOneByte() const; // 是否只包含单字节字符
 
   /**
    * Write the contents of the string to an external buffer.
@@ -1696,6 +1696,7 @@ class V8_EXPORT String : public Primitive {
                    int length = -1,
                    int options = NO_OPTIONS) const;
   // UTF-8 encoded characters.
+  // 字符串操作
   int WriteUtf8(char* buffer,
                 int length = -1,
                 int* nchars_ref = NULL,

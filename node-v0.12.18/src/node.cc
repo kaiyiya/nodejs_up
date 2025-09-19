@@ -1,23 +1,16 @@
-// Copyright Joyent, Inc. and other Node contributors.
+// 版权所有 Joyent, Inc. 及其他 Node 贡献者。
 //
-// Permission is hereby granted, free of charge, to any person obtaining a
-// copy of this software and associated documentation files (the
-// "Software"), to deal in the Software without restriction, including
-// without limitation the rights to use, copy, modify, merge, publish,
-// distribute, sublicense, and/or sell copies of the Software, and to permit
-// persons to whom the Software is furnished to do so, subject to the
-// following conditions:
+// 特此免费授予任何获得本软件及相关文档文件（以下简称"软件"）副本的人，
+// 无限制地处理本软件的权利，包括但不限于使用、复制、修改、合并、发布、
+// 分发、再许可和/或销售本软件副本的权利，以及允许获得本软件副本的人员
+// 这样做的权利，但须遵守以下条件：
 //
-// The above copyright notice and this permission notice shall be included
-// in all copies or substantial portions of the Software.
+// 上述版权声明和本许可声明应包含在所有副本或大部分软件中。
 //
-// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS
-// OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
-// MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN
-// NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM,
-// DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR
-// OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE
-// USE OR OTHER DEALINGS IN THE SOFTWARE.
+// 本软件按"现状"提供，无任何明示或暗示的担保，包括但不限于适销性、
+// 特定用途适用性和非侵权性的担保。在任何情况下，作者或版权持有者
+// 均不对任何索赔、损害或其他责任负责，无论是在合同、侵权或其他方面，
+// 由软件或软件的使用或其他交易引起的。
 
 #include "node.h"
 #include "node_buffer.h"
@@ -153,9 +146,9 @@ static bool debugger_running;
 static uv_async_t dispatch_debug_messages_async;
 
 static Isolate* node_isolate = NULL;
-
-int WRITE_UTF8_FLAGS = v8::String::HINT_MANY_WRITES_EXPECTED |
-                       v8::String::NO_NULL_TERMINATION;
+//优化UTF-8字符串的写入性能
+int WRITE_UTF8_FLAGS = v8::String::HINT_MANY_WRITES_EXPECTED |//提示将有大量写入操作
+                       v8::String::NO_NULL_TERMINATION;// 指定字符串不需要空字符终止
 
 class ArrayBufferAllocator : public ArrayBuffer::Allocator {
  public:
@@ -3218,6 +3211,11 @@ static void EnableDebug(Environment* env) {
 
 
 // Called from the main thread.
+// 这段代码是Node.js调试器的消息分发回调函数，主要功能：
+// 1. 检查调试器是否运行，未运行则启动调试代理
+// 2. 获取当前环境并启动调试功能
+// 3. 处理V8引擎的调试消息
+// 该函数通过libuv异步调用机制处理调试相关的消息。
 static void DispatchDebugMessagesAsyncCallback(uv_async_t* handle) {
   HandleScope scope(node_isolate);
   if (debugger_running == false) {
@@ -3242,7 +3240,12 @@ static void EarlyDebugSignalHandler(int signo) {
   caught_early_debug_signal = 1;
 }
 
-
+// 这段代码的功能是安装早期调试信号处理器：
+// 1. 定义一个`sigaction`结构体变量`sa`
+// 2. 将结构体内容清零初始化
+// 3. 设置信号处理函数为`EarlyDebugSignalHandler`
+// 4. 调用`sigaction`函数将`SIGUSR1`信号与该处理函数关联
+// 这样当进程收到`SIGUSR1`信号时，就会执行`EarlyDebugSignalHandler`函数进行调试处理。
 static void InstallEarlyDebugSignalHandler() {
   struct sigaction sa;
   memset(&sa, 0, sizeof(sa));
@@ -3473,13 +3476,16 @@ void Init(int* argc,
           int* exec_argc,
           const char*** exec_argv) {
   // Initialize prog_start_time to get relative uptime.
+  // 记录启动时间,这通常用于程序启动时间的记录，便于后续计算程序运行耗时
   prog_start_time = static_cast<double>(uv_now(uv_default_loop()));
 
   // Make inherited handles noninheritable.
+  // 防止子进程继承父进程的标准输入、输出和错误流,防止子进程意外访问或修改父进程的标准I/O流
   uv_disable_stdio_inheritance();
 
   // init async debug messages dispatching
   // FIXME(bnoordhuis) Should be per-isolate or per-context, not global.
+  // 初始化异步消息调度
   uv_async_init(uv_default_loop(),
                 &dispatch_debug_messages_async,
                 DispatchDebugMessagesAsyncCallback);
@@ -3489,12 +3495,14 @@ void Init(int* argc,
   // Should come before the call to V8::SetFlagsFromCommandLine()
   // so the user can disable a flag --foo at run-time by passing
   // --no_foo from the command line.
+  // 配置V8参数
   V8::SetFlagsFromString(NODE_V8_OPTIONS, sizeof(NODE_V8_OPTIONS) - 1);
 #endif
 
   // Parse a few arguments which are specific to Node.
   int v8_argc;
   const char** v8_argv;
+  // 解析参数
   ParseArgs(argc, argv, exec_argc, exec_argv, &v8_argc, &v8_argv);
 
   // TODO(bnoordhuis) Intercept --prof arguments and start the CPU profiler
@@ -3700,13 +3708,13 @@ Environment* CreateEnvironment(Isolate* isolate,
 
   Context::Scope context_scope(context);
   Environment* env = Environment::New(context, loop);
-
+// 禁用微任务自动运行
   isolate->SetAutorunMicrotasks(false);
-
+// 初始化立即执行检查句柄
   uv_check_init(env->event_loop(), env->immediate_check_handle());
   uv_unref(
       reinterpret_cast<uv_handle_t*>(env->immediate_check_handle()));
-
+// 初始化空闲句柄
   uv_idle_init(env->event_loop(), env->immediate_idle_handle());
 
   // Inform V8's CPU profiler when we're idle.  The profiler is sampling-based
@@ -3757,39 +3765,41 @@ Environment* CreateEnvironment(Isolate* isolate,
 }
 
 
-int Start(int argc, char** argv) {
-  const char* replaceInvalid = getenv("NODE_INVALID_UTF8");
+int Start(int argc, char** argv) {//argv表示字符串数组 argument count/vector
+  const char* replaceInvalid = getenv("NODE_INVALID_UTF8");//getenv()函数用于检索指定名称的环境变量值
 
   if (replaceInvalid == NULL)
-    WRITE_UTF8_FLAGS |= String::REPLACE_INVALID_UTF8;
+    WRITE_UTF8_FLAGS |= String::REPLACE_INVALID_UTF8;//当没有提供替换无效UTF-8字符的处理函数时，启用自动替换无效UTF-8字符的标志。
 
 #if !defined(_WIN32)
   // Try hard not to lose SIGUSR1 signals during the bootstrap process.
-  InstallEarlyDebugSignalHandler();
+  // 这个信号主要用于调试功能
+  InstallEarlyDebugSignalHandler();//这段代码的功能是：在非Windows平台下，安装早期调试信号处理器，用于在程序启动过程中捕获SIGUSR1信号，防止该信号丢失。这是一个平台相关的条件编译代码块。
 #endif
 
-  assert(argc > 0);
+  assert(argc > 0);//断言,确保传入的参数个数大于0,一般是正确的,因为第一个参数通常是程序的名称
 
   // Hack around with the argv pointer. Used for process.title = "blah".
-  argv = uv_setup_args(argc, argv);
+  argv = uv_setup_args(argc, argv);//uv_setup_args函数用于设置和调整命令行参数argv的指针,以确保它们在程序运行期间保持有效和一致。
 
   // This needs to run *before* V8::Initialize().  The const_cast is not
   // optional, in case you're wondering.
   int exec_argc;
   const char** exec_argv;
-  Init(&argc, const_cast<const char**>(argv), &exec_argc, &exec_argv);
+  Init(&argc, const_cast<const char**>(argv), &exec_argc, &exec_argv);//参数解析和初始化
 
-#if HAVE_OPENSSL
+#if HAVE_OPENSSL//这是一个开源的加密库,提供了丰富的加密算法和协议支持
   // V8 on Windows doesn't have a good source of entropy. Seed it from
   // OpenSSL's pool.
-  V8::SetEntropySource(crypto::EntropySource);
+  V8::SetEntropySource(crypto::EntropySource);//简而言之，这是Node.js启动时初始化V8引擎并配置加密熵源的代码。
 #endif
 
   int code;
   V8::Initialize();
-  node_is_initialized = true;
+  node_is_initialized = true;//V8 引擎初始化完成
+
   {
-    Locker locker(node_isolate);
+    Locker locker(node_isolate);//js里面的锁,确保在多线程环境中对V8引擎的访问是线程安全的
     Isolate::Scope isolate_scope(node_isolate);
     HandleScope handle_scope(node_isolate);
     Local<Context> context = Context::New(node_isolate);
@@ -3800,27 +3810,26 @@ int Start(int argc, char** argv) {
         argc,
         argv,
         exec_argc,
-        exec_argv);
+        exec_argv);//创建基础环境
     Context::Scope context_scope(context);
 
     // Start debug agent when argv has --debug
     if (use_debug_agent)
-      StartDebug(env, debug_wait_connect);
+      StartDebug(env, debug_wait_connect);//调试器支持
 
-    LoadEnvironment(env);
+    LoadEnvironment(env);//加载环境
 
     // Enable debugger
     if (use_debug_agent)
       EnableDebug(env);
 
-    {
-      SealHandleScope seal(node_isolate);
+    {//事件循环运行
+      SealHandleScope seal(node_isolate);//创建一个SealHandleScope作用域来管理V8句柄
       bool more;
       do {
         more = uv_run(env->event_loop(), UV_RUN_ONCE);
         if (more == false) {
           EmitBeforeExit(env);
-
           // Emit `beforeExit` if the loop became alive either after emitting
           // event, or after running some callbacks.
           more = uv_loop_alive(env->event_loop());
@@ -3830,7 +3839,7 @@ int Start(int argc, char** argv) {
       } while (more == true);
     }
 
-    code = EmitExit(env);
+    code = EmitExit(env);//清理和退出
     RunAtExit(env);
 
     env->Dispose();

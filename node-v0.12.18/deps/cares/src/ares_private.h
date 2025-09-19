@@ -81,9 +81,10 @@
 #include "ares_ipv6.h"
 #include "ares_llist.h"
 
+// 如果不支持获取环境变量,这时候就拿到自定义的头文件,重新定义getenv函数
 #ifndef HAVE_GETENV
 #  include "ares_getenv.h"
-#  define getenv(ptr) ares_getenv(ptr)
+#  define getenv(ptr) ares_getenv(ptr)//getenv 是 C 标准库函数，在绝大多数系统上都有实现
 #endif
 
 #ifndef HAVE_STRDUP
