@@ -479,3 +479,4 @@ uv_unref(reinterpret_cast<uv_handle_t*>(&dispatch_debug_messages_async));
 5. **性能优化**：延迟加载、预编译等技术提升启动性能
 
 这个启动流程体现了 Node.js 作为高性能 JavaScript 运行时的设计精髓，为后续学习其他模块奠定了坚实基础。
+
