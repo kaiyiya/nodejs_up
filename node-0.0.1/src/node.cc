@@ -28,38 +28,46 @@ ObjectWrap::~ObjectWrap ( )
   handle_.Clear(); 
 }
 
-ObjectWrap::ObjectWrap (Handle<Object> handle)
+ObjectWrap::ObjectWrap (Handle<Object> handle)//构造函数
 {
   // TODO throw exception if it's already set
-  HandleScope scope;
-  handle_ = Persistent<Object>::New(handle);
-
-  Handle<External> external = External::New(this);
-  handle_->SetInternalField(0, external);
-  handle_.MakeWeak(this, ObjectWrap::MakeWeak);
-
-  attach_count_ = 0;
-  weak_ = false;
+  HandleScope scope;// 创建一个句柄作用域，用于管理V8对象的生命周期
+  handle_ = Persistent<Object>::New(handle); // 将传入的handle对象创建为持久化引用，防止被V8垃圾回收机制回收
+  Handle<External> external = External::New(this); // 创建一个External对象，包装this指针
+  handle_->SetInternalField(0, external); // 将External对象存储在handle对象的第0个内部字段中，用于后续获取C++对象指针
+  handle_.MakeWeak(this, ObjectWrap::MakeWeak); // 设置弱引用回调，当V8垃圾回收时会调用ObjectWrap::MakeWeak函数
+  attach_count_ = 0; // 初始化附加计数器为0，用于跟踪对象的引用计数
+  weak_ = false; // 初始化弱引用标志为false，表示对象当前不处于弱引用状态
 }
 
 void
 ObjectWrap::Attach ()
 {
-  attach_count_ += 1;
+  attach_count_ += 1;// 增加附加计数器
 }
 
 void
 ObjectWrap::Detach ()
 {
   if (attach_count_ > 0)
-    attach_count_ -= 1;
+    attach_count_ -= 1;//减少引用计数器
 
   if(weak_ && attach_count_ == 0) {
     V8::AdjustAmountOfExternalAllocatedMemory(-size());
-    delete this;
+    delete this;//当对象处于弱引用状态并且引用计数为0的时候,执行清理并且删除对象实例
   }
+  // 当v8垃圾回收器发现js对象不再被引用的时候,会调用MakeWeak进行回调,这时候会把弱引用标识设置为true
+  // attach_count_跟踪的是c++层面的引用技术,并不是js层面的,它通过Attach()和Detach()手动管理
+  // 这里有两套引用计数系统,js引用是由v8管理,决定是否进入弱引用状态,c++引用是由attch_count_手动管理
+  // 决定是否真正删除对象,这样避免悬空指针的问题
 }
 
+// 这段代码是Node.js中 ObjectWrap::Unwrap 函数的实现，功能是从V8对象中提取C++对象指针：
+// 1. 检查传入的handle是否为空，为空则返回NULL
+// 2. 验证对象是否有内部字段，没有则返回NULL
+// 3. 获取第一个内部字段的值
+// 4. 将值转换为External类型并返回其存储的C++对象指针
+// 主要用于JavaScript对象与C++对象之间的相互转换。
 void*
 ObjectWrap::Unwrap (Handle<Object> handle)
 {
@@ -84,16 +92,18 @@ ObjectWrap::Unwrap (Handle<Object> handle)
 void
 ObjectWrap::MakeWeak (Persistent<Value> _, void *data)
 {
-  ObjectWrap *obj = static_cast<ObjectWrap*> (data);
-  obj->weak_ = true;
+  // 在v8中,弱引用是指不会阻止对象被垃圾回收的引用,在objectWrap类中,弱引用状态是当MakeWeak被调用的时候,对象进入弱引用状态
+  // 弱持久句柄会被垃圾回收,对象被删除,普通持久句柄不会被垃圾回收,当js对象被回收的时候会触发回调
+  ObjectWrap *obj = static_cast<ObjectWrap*> (data);//强转类型,将void指针(无类型指针)转换为objectwrap类指针
+  obj->weak_ = true;//该对象目前处于弱引用状态
   if (obj->attach_count_ == 0)
-    delete obj;
+    delete obj;//如果该指针的附加计数器为0,删除对象
 }
 
 void
 ObjectWrap::InformV8ofAllocation (ObjectWrap *obj)
 {
-  v8::V8::AdjustAmountOfExternalAllocatedMemory(obj->size());
+  v8::V8::AdjustAmountOfExternalAllocatedMemory(obj->size());//通知v8外部内存使用情况
 }
 
 // Extracts a C string from a V8 Utf8Value.
