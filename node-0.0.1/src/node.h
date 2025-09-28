@@ -12,9 +12,9 @@ namespace node {
 #define NODE_SET_METHOD(obj, name, callback) \
   obj->Set(NODE_SYMBOL(name), v8::FunctionTemplate::New(callback)->GetFunction())
 #define NODE_UNWRAP(type, value) static_cast<type*>(node::ObjectWrap::Unwrap(value))
+// 这个宏是将系统级常量暴露给js环境的核心机制,为js开发者提供了访问底层系统功能的能力
 #define NODE_DEFINE_CONSTANT(target, constant) \
   (target)->Set(v8::String::NewSymbol(#constant), v8::Integer::New(constant))
-
 #define NODE_SET_PROTOTYPE_METHOD(templ, name, callback)                  \
 do {                                                                      \
   Local<Signature> __callback##_SIG = Signature::New(templ);              \
